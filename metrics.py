@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from sklearn import metrics
 
-
+# 算图片维度的auroc，也就是I-auroc，输入测试集中每张图片的标签和预测值，返回auroc值，roc曲线以及对应的threshold
 def compute_imagewise_retrieval_metrics(
     anomaly_prediction_weights, anomaly_ground_truth_labels
 ):
@@ -17,21 +17,26 @@ def compute_imagewise_retrieval_metrics(
         anomaly_ground_truth_labels: [np.array or list] [N] Binary labels - 1
                                     if image is an anomaly, 0 if not.
     """
+    # roc曲线
     fpr, tpr, thresholds = metrics.roc_curve(
         anomaly_ground_truth_labels, anomaly_prediction_weights
     )
+
+    # auroc值
     auroc = metrics.roc_auc_score(
         anomaly_ground_truth_labels, anomaly_prediction_weights
     )
-    
+
+    # pr曲线，pr曲线可以通过计算F1分数来选取最优threshold
     precision, recall, _ = metrics.precision_recall_curve(
         anomaly_ground_truth_labels, anomaly_prediction_weights
     )
+    # pr_auc值
     auc_pr = metrics.auc(recall, precision)
     
     return {"auroc": auroc, "fpr": fpr, "tpr": tpr, "threshold": thresholds}
 
-
+# 像素版本的auroc，也就是p-auroc，相比于图像版本，多返回了通过pr得到的最优threshold，以及最优threshold下的fpr与fnr用于生成预测mask。
 def compute_pixelwise_retrieval_metrics(anomaly_segmentations, ground_truth_masks):
     """
     Computes pixel-wise statistics (AUROC, FPR, TPR) for anomaly segmentations
@@ -85,6 +90,9 @@ def compute_pixelwise_retrieval_metrics(anomaly_segmentations, ground_truth_mask
 
 import pandas as pd
 from skimage import measure
+
+
+# 计算pro-auroc，可以理解为p-auroc的区域升级版，和p-auroc一样是用来评价异常定位的一个指标，但是原文中主要还是看p-auroc
 def compute_pro(masks, amaps, num_th=200):
 
     df = pd.DataFrame([], columns=["pro", "fpr", "threshold"])
